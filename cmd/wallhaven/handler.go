@@ -54,6 +54,7 @@ func randomImageHandler(opts options) http.HandlerFunc {
 		}
 
 		path := apiResponse.Data[rand.Intn(len(apiResponse.Data))].Path
+		slog.Info("random image", "path", path)
 
 		imageResp, err := http.Get(path)
 		if err != nil {
