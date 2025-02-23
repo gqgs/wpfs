@@ -19,6 +19,8 @@ func (o *options) flagSet() *flag.FlagSet {
 // Parse parses the arguments in os.Args
 func (o *options) Parse() error {
     flagSet := o.flagSet()
+    
+    var positional []string
     args := os.Args[1:]
     for len(args) > 0 {
         if err := flagSet.Parse(args); err != nil {
@@ -27,12 +29,27 @@ func (o *options) Parse() error {
 
         if remaining := flagSet.NArg(); remaining > 0 {
             posIndex := len(args) - remaining
+            
+            positional = append(positional, args[posIndex])
             args = args[posIndex+1:]
             continue
         }
         break
     }
 
+    
+    if len(positional) == 0 {
+        if o.mountpoint == "" {
+            return errors.New("argument 'mountpoint' is required")
+        }
+        if o.fileServer == "" {
+            return errors.New("argument 'fileServer' is required")
+        }
+        return nil
+    }
+    if len(positional) > 0 {
+        o.mountpoint = positional[0]
+    }
     if o.mountpoint == "" {
         return errors.New("argument 'mountpoint' is required")
     }

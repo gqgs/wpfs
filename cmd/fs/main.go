@@ -8,7 +8,7 @@ import (
 //go:generate go tool argsgen
 
 type options struct {
-	mountpoint string `arg:"mountpoint,required"`
+	mountpoint string `arg:"mountpoint,positional+required"`
 	fileServer string `arg:"file server endpoint,required"`
 }
 
