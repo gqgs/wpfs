@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"math/rand"
 	"net/http"
+	"time"
 )
 
 type ApiResponse struct {
@@ -19,7 +20,7 @@ type ApiResponse struct {
 func randomImageHandler(apiKey string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		slog.Info("new request")
-		searchResp, err := http.Get("https://wallhaven.cc/api/v1/search?apikey=" + apiKey + "&sort=random&resolutions=3840x2160&ratios=16x9&categories=010&purity=110")
+		searchResp, err := http.Get("https://wallhaven.cc/api/v1/search?apikey=" + apiKey + "&sort=random&resolutions=3840x2160&ratios=16x9&categories=010&purity=110&seed=" + fmt.Sprint(time.Now().Unix()))
 		if err != nil {
 			slog.Error("failed to get random image", "error", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
