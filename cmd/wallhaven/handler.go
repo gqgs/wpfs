@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"math/rand"
 	"net/http"
+	"net/url"
 	"time"
 )
 
@@ -17,10 +18,24 @@ type ApiResponse struct {
 	} `json:"data"`
 }
 
-func randomImageHandler(apiKey string) http.HandlerFunc {
+func randomImageHandler(opts options) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		slog.Info("new request")
-		searchResp, err := http.Get("https://wallhaven.cc/api/v1/search?apikey=" + apiKey + "&sort=random&resolutions=3840x2160&ratios=16x9&categories=010&purity=100&seed=" + fmt.Sprint(time.Now().Unix()))
+		url, err := url.Parse("https://wallhaven.cc/api/v1/search")
+		if err != nil {
+			slog.Error("failed to parse url", "error", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		url.Query().Add("apikey", opts.apiKey)
+		url.Query().Add("sort", "random")
+		url.Query().Add("resolutions", opts.resolution)
+		url.Query().Add("ratios", opts.ratio)
+		url.Query().Add("categories", opts.category)
+		url.Query().Add("purity", opts.purity)
+		url.Query().Add("seed", fmt.Sprint(time.Now().Unix()))
+
+		searchResp, err := http.Get(url.String())
 		if err != nil {
 			slog.Error("failed to get random image", "error", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -63,7 +78,7 @@ func randomImageHandler(apiKey string) http.HandlerFunc {
 
 func handler(opts options) error {
 
-	http.HandleFunc("GET /random", randomImageHandler(opts.apiKey))
+	http.HandleFunc("GET /random", randomImageHandler(opts))
 
 	log.Printf("Server is running. Visit http://localhost:%d/random", opts.port)
 
