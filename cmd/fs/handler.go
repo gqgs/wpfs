@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	numberOfFiles = 4
+	numberOfFiles = 2
 )
 
 var (
@@ -36,6 +36,15 @@ type File struct {
 // Ensure File implements Getattr and NodeOpener.
 var _ = (fs.NodeGetattrer)((*File)(nil))
 var _ = (fs.NodeOpener)((*File)(nil))
+var _ = (fs.NodeReleaser)((*File)(nil))
+
+func (f *File) Release(ctx context.Context, fh fs.FileHandle) syscall.Errno {
+	slog.Info("File Release")
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.data = nil
+	return fs.OK
+}
 
 func (f *File) Getattr(ctx context.Context, fh fs.FileHandle, out *fuse.AttrOut) syscall.Errno {
 	slog.Info("Getattr", "file", f.Name)
@@ -102,7 +111,7 @@ func (fh *FileHandle) Read(ctx context.Context, dest []byte, off int64) (fuse.Re
 
 // Release is a no-op in this example.
 func (fh *FileHandle) Release(ctx context.Context) syscall.Errno {
-	slog.Info("Release")
+	slog.Info("FileHandle Release")
 	return 0
 }
 
