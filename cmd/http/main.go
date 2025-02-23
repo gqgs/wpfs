@@ -5,7 +5,7 @@ import (
 	"os"
 )
 
-//go:generate go run github.com/gqgs/argsgen@latest
+//go:generate go tool argsgen
 
 type options struct {
 	root string `arg:"root of folder to be server,required"`

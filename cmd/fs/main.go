@@ -5,7 +5,7 @@ import (
 	"os"
 )
 
-//go:generate go run github.com/gqgs/argsgen@latest
+//go:generate go tool argsgen
 
 type options struct {
 	mountpoint string `arg:"mountpoint,required"`
@@ -17,7 +17,7 @@ func main() {
 		mountpoint: os.Getenv("WPFS_MOUNTPOINT"),
 		fileServer: os.Getenv("WPFS_FILE_SERVER"),
 	}
-	// o.MustParse()
+	o.MustParse()
 
 	if err := handler(o); err != nil {
 		slog.Error(err.Error())
