@@ -118,20 +118,14 @@ func (fh *FileHandle) Release(ctx context.Context) syscall.Errno {
 // Dir represents the root directory.
 type Dir struct {
 	fs.Inode
-	files map[string]*File
+	files   map[string]*File
+	entries []fuse.DirEntry
 }
 
 // Readdir returns a list of files in the directory.
 func (d *Dir) Readdir(ctx context.Context) (fs.DirStream, syscall.Errno) {
 	slog.Info("Readdir")
-	entries := make([]fuse.DirEntry, 0, numberOfFiles)
-	for range numberOfFiles {
-		entries = append(entries, fuse.DirEntry{
-			Name: fmt.Sprintf("%05d.png", atomic.AddInt64(&counter, 1)),
-			Mode: fuse.S_IFREG,
-		})
-	}
-	return fs.NewListDirStream(entries), 0
+	return fs.NewListDirStream(d.entries), 0
 }
 
 // Lookup will check the current (latest) generation of file nodes.
@@ -150,8 +144,16 @@ func (d *Dir) Lookup(ctx context.Context, name string, out *fuse.EntryOut) (*fs.
 }
 
 func handler(opts options) error {
+	entries := make([]fuse.DirEntry, 0, numberOfFiles)
+	for range numberOfFiles {
+		entries = append(entries, fuse.DirEntry{
+			Name: fmt.Sprintf("%05d.png", atomic.AddInt64(&counter, 1)),
+			Mode: fuse.S_IFREG,
+		})
+	}
 	root := &Dir{
-		files: make(map[string]*File, 0),
+		files:   make(map[string]*File, 0),
+		entries: entries,
 	}
 
 	randomEndpoint = opts.fileServer + "/random"
