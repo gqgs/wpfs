@@ -20,22 +20,19 @@ type ApiResponse struct {
 
 func randomImageHandler(opts options) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		slog.Info("new request")
-		url, err := url.Parse("https://wallhaven.cc/api/v1/search")
-		if err != nil {
-			slog.Error("failed to parse url", "error", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		url.Query().Add("apikey", opts.apiKey)
-		url.Query().Add("sort", "random")
-		url.Query().Add("resolutions", opts.resolution)
-		url.Query().Add("ratios", opts.ratio)
-		url.Query().Add("categories", opts.category)
-		url.Query().Add("purity", opts.purity)
-		url.Query().Add("seed", fmt.Sprint(time.Now().Unix()))
+		query := make(url.Values, 0)
+		query.Add("apikey", opts.apiKey)
+		query.Add("sort", "random")
+		query.Add("resolutions", opts.resolution)
+		query.Add("ratios", opts.ratio)
+		query.Add("categories", opts.category)
+		query.Add("purity", opts.purity)
+		query.Add("seed", fmt.Sprint(time.Now().Unix()))
 
-		searchResp, err := http.Get(url.String())
+		url := "https://wallhaven.cc/api/v1/search?" + query.Encode()
+		slog.Info("new request", "url", url)
+
+		searchResp, err := http.Get(url)
 		if err != nil {
 			slog.Error("failed to get random image", "error", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
