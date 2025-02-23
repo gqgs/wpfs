@@ -1,4 +1,4 @@
-module github.com/gqgs/wallpaperfs
+module github.com/gqgs/wpfs
 
 go 1.24.0
 
