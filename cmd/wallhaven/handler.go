@@ -20,6 +20,11 @@ type ApiResponse struct {
 	} `json:"data"`
 }
 
+type Image struct {
+	Body     []byte
+	MimeType string
+}
+
 func randomImageHandler(opts options) http.HandlerFunc {
 	g := new(singleflight.Group)
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -65,7 +70,10 @@ func randomImageHandler(opts options) http.HandlerFunc {
 			if err != nil {
 				return nil, fmt.Errorf("failed read body data: %w", err)
 			}
-			return body, nil
+			return &Image{
+				Body:     body,
+				MimeType: imageResp.Header.Get("Content-Type"),
+			}, nil
 		})
 
 		if err != nil {
@@ -74,9 +82,9 @@ func randomImageHandler(opts options) http.HandlerFunc {
 			return
 		}
 
-		w.Header().Set("Content-Type", "image/jpeg")
+		w.Header().Set("Content-Type", result.(*Image).MimeType)
 		w.WriteHeader(http.StatusOK)
-		w.Write(result.([]byte))
+		w.Write(result.(*Image).Body)
 	}
 }
 
