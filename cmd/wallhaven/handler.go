@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"net/url"
 	"time"
+
+	"golang.org/x/sync/singleflight"
 )
 
 type ApiResponse struct {
@@ -19,7 +21,9 @@ type ApiResponse struct {
 }
 
 func randomImageHandler(opts options) http.HandlerFunc {
+	g := new(singleflight.Group)
 	return func(w http.ResponseWriter, r *http.Request) {
+		seed := time.Now().Truncate(time.Minute).Unix()
 		query := make(url.Values, 0)
 		query.Add("apikey", opts.apiKey)
 		query.Add("sort", "random")
@@ -27,50 +31,53 @@ func randomImageHandler(opts options) http.HandlerFunc {
 		query.Add("ratios", opts.ratio)
 		query.Add("categories", opts.category)
 		query.Add("purity", opts.purity)
-		query.Add("seed", fmt.Sprint(time.Now().Unix()))
+		query.Add("seed", fmt.Sprint(seed))
 
 		url := "https://wallhaven.cc/api/v1/search?" + query.Encode()
 		slog.Info("new request", "url", url)
 
-		searchResp, err := http.Get(url)
-		if err != nil {
-			slog.Error("failed to get random image", "error", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+		resultCh := g.DoChan(fmt.Sprint(seed), func() (any, error) {
+			searchResp, err := http.Get(url)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get random image: %w", err)
+			}
+			defer searchResp.Body.Close()
+
+			var apiResponse ApiResponse
+			if err := json.NewDecoder(searchResp.Body).Decode(&apiResponse); err != nil {
+				return nil, fmt.Errorf("failed to decode random image: %w", err)
+			}
+
+			if len(apiResponse.Data) == 0 {
+				return nil, fmt.Errorf("no data found")
+			}
+
+			path := apiResponse.Data[rand.Intn(len(apiResponse.Data))].Path
+			slog.Info("random image", "path", path)
+
+			imageResp, err := http.Get(path)
+			if err != nil {
+				return nil, fmt.Errorf("failed to get random image: %w", err)
+			}
+			defer imageResp.Body.Close()
+
+			body, err := io.ReadAll(imageResp.Body)
+			if err != nil {
+				return nil, fmt.Errorf("failed read body data: %w", err)
+			}
+			return body, nil
+		})
+
+		result := <-resultCh
+		if result.Err != nil {
+			slog.Error("failed to get data from url", "err", result.Err)
+			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		defer searchResp.Body.Close()
-
-		var apiResponse ApiResponse
-		if err := json.NewDecoder(searchResp.Body).Decode(&apiResponse); err != nil {
-			slog.Error("failed to decode random image", "error", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		if len(apiResponse.Data) == 0 {
-			slog.Error("no data found")
-			http.Error(w, "no data found", http.StatusInternalServerError)
-			return
-		}
-
-		path := apiResponse.Data[rand.Intn(len(apiResponse.Data))].Path
-		slog.Info("random image", "path", path)
-
-		imageResp, err := http.Get(path)
-		if err != nil {
-			slog.Error("failed to get random image", "error", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		defer imageResp.Body.Close()
 
 		w.Header().Set("Content-Type", "image/jpeg")
 		w.WriteHeader(http.StatusOK)
-		if _, err = io.Copy(w, imageResp.Body); err != nil {
-			slog.Error("failed to copy random image", "error", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+		w.Write(result.Val.([]byte))
 	}
 }
 
