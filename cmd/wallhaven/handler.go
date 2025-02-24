@@ -36,7 +36,7 @@ func randomImageHandler(opts options) http.HandlerFunc {
 		url := "https://wallhaven.cc/api/v1/search?" + query.Encode()
 		slog.Info("new request", "url", url)
 
-		resultCh := g.DoChan(fmt.Sprint(seed), func() (any, error) {
+		result, err, _ := g.Do(fmt.Sprint(seed), func() (any, error) {
 			searchResp, err := http.Get(url)
 			if err != nil {
 				return nil, fmt.Errorf("failed to get random image: %w", err)
@@ -68,16 +68,15 @@ func randomImageHandler(opts options) http.HandlerFunc {
 			return body, nil
 		})
 
-		result := <-resultCh
-		if result.Err != nil {
-			slog.Error("failed to get data from url", "err", result.Err)
+		if err != nil {
+			slog.Error("failed to get data from url", "err", err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
 
 		w.Header().Set("Content-Type", "image/jpeg")
 		w.WriteHeader(http.StatusOK)
-		w.Write(result.Val.([]byte))
+		w.Write(result.([]byte))
 	}
 }
 
