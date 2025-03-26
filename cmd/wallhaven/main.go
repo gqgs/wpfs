@@ -23,7 +23,7 @@ func main() {
 		resolution: "3840x2160",
 		ratio:      "16x9",
 		category:   "010",
-		purity:     "100",
+		purity:     "110",
 	}
 	o.MustParse()
 

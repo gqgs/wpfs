@@ -14,6 +14,10 @@ import (
 	"golang.org/x/sync/singleflight"
 )
 
+const (
+	sleepGroupTime = time.Second * 5
+)
+
 type ApiResponse struct {
 	Data []struct {
 		Path string `json:"path"`
@@ -28,6 +32,7 @@ type Image struct {
 func randomImageHandler(opts options) http.HandlerFunc {
 	g := new(singleflight.Group)
 	return func(w http.ResponseWriter, r *http.Request) {
+		slog.Info("new request")
 		seed := time.Now().Truncate(time.Minute).Unix()
 		query := make(url.Values, 0)
 		query.Add("apikey", opts.apiKey)
@@ -39,9 +44,9 @@ func randomImageHandler(opts options) http.HandlerFunc {
 		query.Add("seed", fmt.Sprint(seed))
 
 		url := "https://wallhaven.cc/api/v1/search?" + query.Encode()
-		slog.Info("new request", "url", url)
+		slog.Info("creating new group request", "url", url)
 
-		result, err, _ := g.Do(fmt.Sprint(seed), func() (any, error) {
+		result, err, shared := g.Do("key", func() (any, error) {
 			searchResp, err := http.Get(url)
 			if err != nil {
 				return nil, fmt.Errorf("failed to get random image: %w", err)
@@ -81,6 +86,8 @@ func randomImageHandler(opts options) http.HandlerFunc {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+
+		slog.Info("returning image", "seed", seed, "shared", shared)
 
 		w.Header().Set("Content-Type", result.(*Image).MimeType)
 		w.WriteHeader(http.StatusOK)
