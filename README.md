@@ -6,9 +6,8 @@ WPFS is a FUSE-based filesystem that provides dynamic access to wallpapers. It s
 
 - FUSE-based filesystem implementation
 - Multiple backend support:
-  - Local file serving
+  - Any HTTP server with an image endpoint
   - Wallhaven.cc API integration
-  - HTTP server for random image serving
 - Dynamic file generation
 
 ## Requirements
@@ -33,15 +32,7 @@ Environment variables:
 - `WPFS_MOUNTPOINT`: Directory where the filesystem will be mounted
 - `WPFS_FILE_SERVER`: Endpoint of the file server to fetch images from
 
-### 2. HTTP Server (cmd/http)
-
-A simple HTTP server that serves random images from a local directory.
-
-Environment variables:
-- `WPFS_ROOT`: Root directory containing images to serve
-- Default port: 9999
-
-### 3. Wallhaven Integration (cmd/wallhaven)
+### 2. Wallhaven Integration (cmd/wallhaven)
 
 Integration with wallhaven.cc API to fetch random wallpapers.
 
@@ -54,12 +45,6 @@ Environment variables:
 ## Usage
 
 1. Start the desired backend server:
-
-   For local files:
-   ```bash
-   export WPFS_ROOT=/path/to/your/wallpapers
-   go run ./cmd/http
-   ```
 
    For wallhaven:
    ```bash
